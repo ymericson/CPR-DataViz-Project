@@ -8,7 +8,7 @@ library(ggmap)
 # r <- GET("https://data.cityofchicago.org/api/odata/v4/uupf-x98q")
 # Chicago Business Licenses - Current Active
 # https://bit.ly/2NP2U9K
-setwd("C:/Users/ymeri/Documents/R")
+setwd("C:/Users/ymeri/Documents/R/CPR-DataViz-Project")
 businesses <- read.csv('Business_Licenses.csv')
 colnames(businesses) <- tolower(colnames(businesses))
 businesses <- businesses %>% rename(long = longitude, 
