@@ -68,6 +68,7 @@ all_fit.sf <- st_as_sf(all_fit)
 il_spdf_all_fit <- st_join(il_spdf.sf, all_fit.sf) 
 # Keeps all "all_fit.sf", sort by row.names(all_fit.sf)
 all_fit_il_spdf <- st_join(all_fit.sf, il_spdf.sf)
+all_fit_il_spdf$community <- str_to_title(all_fit_il_spdf$community)
 # Convert back to Spatial*
 #il_spdf_all_fit <- as(il_spdf_all_fit, "Spatial")
 #all_fit_il_spdf <- as(all_fit_il_spdf, "Spatial")
@@ -78,11 +79,16 @@ all_fit_il_spdf <- st_join(all_fit.sf, il_spdf.sf)
 gyms_by_com <- 
   all_fit_il_spdf %>% group_by(community) %>% count(community)
 
-ggplot(gyms_by_com, aes(reorder(community, -n), n)) +
-  geom_col()
+top_coms <- gyms_by_com$community[order(gyms_by_com$n, decreasing=TRUE)]
+ggplot(data=subset(gyms_by_com, community %in% top_coms[1:15]), 
+                   aes(reorder(community, -n), n)) +
+  geom_col() +
+  labs(x = "Community Areas",
+       y = "Number of Fitness Centers") +
+  coord_flip() 
 
 
-
+top_n(gyms_by_com, n=3, n)
 
 
 
