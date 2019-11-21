@@ -6,6 +6,7 @@ library(mapdata)
 library(rgdal)
 library(gridExtra)
 library(grid)
+library(sf)
 
 # ----------Chicago Business Licenses https://bit.ly/2NP2U9K----------
 setwd("C:/Users/ymeri/Documents/R/CPR-DataViz-Project/Data")
@@ -23,7 +24,6 @@ priv_fit <- businesses %>%
 colnames(priv_fit)[3] <- "zip"
 priv_fit$type <- 'Private'
 write.csv(priv_fit, file='Private_fitness_centers.csv')
-
 # ----------Chicago Park District Parks https://bit.ly/2OdU3P9----------
 pub_parks <- read.csv('CPD_Parks.csv')
 colnames(pub_parks) <- tolower(colnames(pub_parks))
@@ -44,23 +44,21 @@ pub_fit <- merge(pub_fit, pub_parks, by='park.number') %>%
   rename(name = park) #, facility.type = facility.name)
 pub_fit$long <- as.numeric(as.character(pub_fit$long))
 pub_fit$lat <- as.numeric(as.character(pub_fit$lat))
-
 # ----------Chicago Community Areas ShapeFile https://bit.ly/37f1Btw----------
 il_spdf <- readOGR( 
   dsn= getwd() , 
   layer="geo_export_17e99094-f66e-4bf7-89b3-fa329ded2341",
   verbose=FALSE)
+il_spdf@data$community <- str_to_title(il_spdf@data$community)
+
+
+
 
 all_fit <- rbind(pub_fit, priv_fit)
 all_fit <- all_fit[!with(all_fit,is.na(long)& is.na(lat)),]
 
-#all_fit <- all_fit %>% drop_na(lat, long)
 coordinates(all_fit) <- ~long+lat
 proj4string(all_fit) <- proj4string(il_spdf)
-#plot(il_spdf) + points(all_fit)
-#over(all_fit, il_spdf)
-#cbind.data.frame(pts, country=over(pts, countries)$ADMIN)
-
 # Convert to sf-objects
 il_spdf.sf <- st_as_sf(il_spdf)
 all_fit.sf <- st_as_sf(all_fit)
@@ -69,42 +67,21 @@ il_spdf_all_fit <- st_join(il_spdf.sf, all_fit.sf)
 # Keeps all "all_fit.sf", sort by row.names(all_fit.sf)
 all_fit_il_spdf <- st_join(all_fit.sf, il_spdf.sf)
 all_fit_il_spdf$community <- str_to_title(all_fit_il_spdf$community)
-# Convert back to Spatial*
-#il_spdf_all_fit <- as(il_spdf_all_fit, "Spatial")
-#all_fit_il_spdf <- as(all_fit_il_spdf, "Spatial")
-
-#gyms_by_com2 <- 
-#  il_spdf_all_fit %>% group_by(community) %>% count(community)
 
 gyms_by_com <- 
-  all_fit_il_spdf %>% group_by(community) %>% count(community)
+  all_fit_il_spdf %>% group_by(community) %>% count(community) %>%
+  as.data.frame(gyms_by_com)
+gyms_by_com <- merge(gyms_by_com, as.data.frame(il_spdf@data), by='community', all=TRUE)%>% select(community, n)
+gyms_by_com[is.na(gyms_by_com)] <- 0
+
 
 top_coms <- gyms_by_com$community[order(gyms_by_com$n, decreasing=TRUE)]
-ggplot(data=subset(gyms_by_com, community %in% top_coms[1:15]), 
-                   aes(reorder(community, -n), n)) +
+ggplot(data=subset(gyms_by_com, community %in% top_coms[1:15]), aes(reorder(community, -n), n)) +
   geom_col() +
-  labs(x = "Community Areas",
-       y = "Number of Fitness Centers") +
-  coord_flip() 
+  labs(x = "Community Areas", y = "Number of Fitness Centers") +
+  coord_flip() + 
+  scale_x_discrete(limits = rev(levels(gyms_by_com$community)))
 
-
-top_n(gyms_by_com, n=3, n)
-
-
-
-# Chicago Community Areas
-il_spdf <- readOGR( 
-  dsn= getwd() , 
-  #layer="geo_export_754fd6d2-6eab-484b-b590-75f1a6d0e041",
-  layer="geo_export_17e99094-f66e-4bf7-89b3-fa329ded2341",
-  verbose=FALSE)
-#il_spdf <- merge(il_spdf, gyms_by_ward, by='ward')
-#il_spdf@data[["n"]][is.na(il_spdf@data[["n"]])] <- 0
-
-palette(colorRampPalette(c("white", "red"))(128))
-n_gym <- il_spdf@data[["n"]]
-cols <- (n_gym - min(n_gym))/diff(range(n_gym))*127+1
-#plot(il_spdf, col=cols)
 
 # two ggplot maps side-by-side
 p1 <- ggplot() +
@@ -119,6 +96,7 @@ p2 <- ggplot() +
   geom_point(data=pub_fit, aes(x=long, y=lat), color='#00BFC4') +
   theme_void() +
   coord_fixed(1.3)
+all_fit <- as.data.frame(all_fit)
 p3 <- ggplot() +
   geom_polygon(data=il_spdf, aes(x=long, y=lat, group=group),
                fill=NA, color="dark grey") +
@@ -127,15 +105,12 @@ p3 <- ggplot() +
   labs(colour = "Fitness Center Type", size=100) +
   coord_fixed(1.3) +
   theme(legend.position='bottom')
-
-get_legend<-function(myggplot){
+get_legend <- function(myggplot){
   tmp <- ggplot_gtable(ggplot_build(myggplot))
   leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
   legend <- tmp$grobs[[leg]]
-  return(legend)
-}
+  return(legend)}
 legend <- get_legend(p3)
-
 tg <- textGrob("Locations of Private and Public Fitness Centers in Chicago", gp=gpar(fontsize=15, fontface="bold"))
 sg <- textGrob("Private centers are concentrated in central and north side, while public fitness centers are spread out more evenly across Chicago", gp=gpar(fontsize=11))
 map_sub <- textGrob("Data Source: Chicago Open Data Portal", x = 0.9, y = 0.5, gp=gpar(fontsize=8))
@@ -145,25 +120,6 @@ p <- grid.arrange(p1, p2, legend, ncol=2, nrow = 2,
 grid.arrange(tg, sg, p, nrow=3, 
              bottom = map_sub, 
              heights=c(0.05, 0.05, 0.9))
-
-
-# ggplot() +
-#   theme_bw() +
-#   geom_point(data=gyms, aes(x=long, y=lat)) +
-#   coord_fixed(1.3) +
-#   theme(axis.title.x=element_blank(), axis.title.y=element_blank(),
-#         axis.text.x=element_blank(), axis.text.y=element_blank(),
-#         axis.ticks.x=element_blank())
-
-
-# income, where people are working, living
-# PUBLIC recreational centers
-# American Comiunity Survey
-# cook county data - employment
-# obesity by zip code
-
-# For POINTS that fall within CA_counties, adds ATTRIBUTES, retains ALL pts if left=TRUE, otherwise uses inner_join
-isd_ca_co_pts <- st_join(il_spdf, left = FALSE, all_fit_long_lat["name"]) # join points
 
 
 
