@@ -50,7 +50,21 @@ il_spdf <- readOGR(
   layer="geo_export_17e99094-f66e-4bf7-89b3-fa329ded2341",
   verbose=FALSE)
 il_spdf@data$community <- str_to_title(il_spdf@data$community)
+# ---------- Public Health Statistics https://bit.ly/35pX99O ----------
+health_stat <- read.csv('Public_Health_Statistics.csv')
 
+
+library(httr)
+github_api <- function(path) {
+  url <- modify_url("https://data.cityofchicago.org", path = path)
+  GET(url)
+}
+r <- GET("https://data.cityofchicago.org/resource/iqnk-2tcu.json")
+json_file <- fromJSON(r)
+
+
+resp <- github_api("/resource/y6p2-px98.json?category=Fruit&item=Peaches")
+resp
 
 
 
@@ -75,12 +89,15 @@ gyms_by_com <- merge(gyms_by_com, as.data.frame(il_spdf@data), by='community', a
 gyms_by_com[is.na(gyms_by_com)] <- 0
 
 
-top_coms <- gyms_by_com$community[order(gyms_by_com$n, decreasing=TRUE)]
-ggplot(data=subset(gyms_by_com, community %in% top_coms[1:15]), aes(reorder(community, -n), n)) +
-  geom_col() +
+
+gyms_by_com %>% arrange(desc(n)) %>%
+  slice(1:77) %>%
+  ggplot(., aes(reorder(community, n), y=n)) +
+  geom_col() + 
   labs(x = "Community Areas", y = "Number of Fitness Centers") +
   coord_flip() + 
-  scale_x_discrete(limits = rev(levels(gyms_by_com$community)))
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 50)) 
+
 
 
 # two ggplot maps side-by-side
