@@ -7,6 +7,7 @@ library(rgdal)
 library(gridExtra)
 library(grid)
 library(sf)
+library(RColorBrewer)
 
 # ----------Chicago Business Licenses https://bit.ly/2NP2U9K----------
 setwd("C:/Users/ymeri/Documents/R/CPR-DataViz-Project/Data")
@@ -54,19 +55,6 @@ il_spdf@data$community <- str_to_title(il_spdf@data$community)
 health_stat <- read.csv('Public_Health_Statistics.csv')
 
 
-library(httr)
-github_api <- function(path) {
-  url <- modify_url("https://data.cityofchicago.org", path = path)
-  GET(url)
-}
-r <- GET("https://data.cityofchicago.org/resource/iqnk-2tcu.json")
-json_file <- fromJSON(r)
-
-
-resp <- github_api("/resource/y6p2-px98.json?category=Fruit&item=Peaches")
-resp
-
-
 
 all_fit <- rbind(pub_fit, priv_fit)
 all_fit <- all_fit[!with(all_fit,is.na(long)& is.na(lat)),]
@@ -90,6 +78,10 @@ gyms_by_com[is.na(gyms_by_com)] <- 0
 
 
 
+
+
+
+# bar graph sorted by # of gyms
 gyms_by_com %>% arrange(desc(n)) %>%
   slice(1:77) %>%
   ggplot(., aes(reorder(community, n), y=n)) +
@@ -97,6 +89,7 @@ gyms_by_com %>% arrange(desc(n)) %>%
   labs(x = "Community Areas", y = "Number of Fitness Centers") +
   coord_flip() + 
   scale_y_continuous(expand = c(0, 0), limits = c(0, 50)) 
+
 
 
 
@@ -139,4 +132,13 @@ grid.arrange(tg, sg, p, nrow=3,
              heights=c(0.05, 0.05, 0.9))
 
 
+# contour heat maps
+ggplot() +
+  stat_density2d(data=all_fit, aes(x=long, y=lat, fill=..level..,alpha=..level..), bins=20, geom = "polygon") +
+  scale_fill_gradientn(colours=rev(brewer.pal(11, "Spectral"))) +
+  geom_polygon(data=il_spdf, aes(x=long, y=lat, group=group), fill=NA, color="dark grey") +
+  guides(alpha = FALSE) + 
+  theme_void() +
+  coord_fixed(1.3) + 
+  ggtitle("Concentration of Private and Public Gyms in Chicago")
 
