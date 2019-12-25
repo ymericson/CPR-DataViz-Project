@@ -55,7 +55,6 @@ il_spdf@data$community <- str_to_title(il_spdf@data$community)
 health_stat <- read.csv('Public_Health_Statistics.csv')
 
 
-
 all_fit <- rbind(pub_fit, priv_fit)
 all_fit <- all_fit[!with(all_fit,is.na(long)& is.na(lat)),]
 
@@ -70,19 +69,28 @@ il_spdf_all_fit <- st_join(il_spdf.sf, all_fit.sf)
 all_fit_il_spdf <- st_join(all_fit.sf, il_spdf.sf)
 all_fit_il_spdf$community <- str_to_title(all_fit_il_spdf$community)
 
-gyms_by_com <- 
+community_stats <- 
   all_fit_il_spdf %>% group_by(community) %>% count(community) %>%
-  as.data.frame(gyms_by_com)
-gyms_by_com <- merge(gyms_by_com, as.data.frame(il_spdf@data), by='community', all=TRUE)%>% select(community, n)
-gyms_by_com[is.na(gyms_by_com)] <- 0
+  as.data.frame(community_stats)
+community_stats <- merge(community_stats, as.data.frame(il_spdf@data), by='community', all=TRUE) %>% 
+  select(community, n)
+community_stats$community[community_stats$community == "Ohare"] <- "O'Hare"
+community_stats$community[community_stats$community == "Mckinley Park"] <- "McKinley Park"
+community_stats$community[community_stats$community == "Montclare"] <- "Montclaire"
+community_stats[is.na(community_stats)] <- 0
+community_stats <- merge(community_stats, health_stat, by.x='community', by.y='Community.Area.Name', all=TRUE) %>% 
+  select(community, n, Diabetes.related, Below.Poverty.Level, Per.Capita.Income, Unemployment)
 
 
 
+ggplot(community_stats, aes(x=Per.Capita.Income, y=Diabetes.related)) +
+  geom_point(aes(size=n)) + 
+  geom_smooth(method=lm)
 
 
 
 # bar graph sorted by # of gyms
-gyms_by_com %>% arrange(desc(n)) %>%
+community_stats %>% arrange(desc(n)) %>%
   slice(1:77) %>%
   ggplot(., aes(reorder(community, n), y=n)) +
   geom_col() + 
