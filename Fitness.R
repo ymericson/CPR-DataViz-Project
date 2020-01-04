@@ -81,11 +81,24 @@ community_stats[is.na(community_stats)] <- 0
 community_stats <- merge(community_stats, health_stat, by.x='community', by.y='Community.Area.Name', all=TRUE) %>% 
   select(community, n, Diabetes.related, Below.Poverty.Level, Per.Capita.Income, Unemployment)
 
+community.to.sides <- list(
+  Central = c('Near North Side', 'Loop', 'Near South Side'),
+  North = c('North Center', 'Lake View', 'Lincoln Park', 'Avondale', 'Logan Square', 'Rogers Park', 'West Ridge', 'Uptown', 'Lincoln Square', 'Edison Park', 'Norwood Park', 'Jefferson Park', 'Forest Glen', 'North Park', 'Albany Park', "O'Hare", 'Edgewater', 'Portage Park', 'Irving Park', 'Dunning', 'Montclaire', 'Belmont Cragin', 'Hermosa'),
+  West = c('Humboldt Park', 'West Town', 'Austin', 'West Garfield Park', 'East Garfield Park', 'Near West Side', 'North Lawndale', 'South Lawndale', 'Lower West Side'),
+  South = c('Armour Square', 'Douglas', 'Oakland', 'Fuller Park', 'Grand Boulevard', 'Kenwood', 'Washington Park', 'Hyde Park', 'Woodlawn', 'South Shore', 'Bridgeport', 'Greater Grand Crossing', 'Garfield Ridge', 'Archer Heights', 'Brighton Park', 'McKinley Park', 'New City', 'West Elsdon', 'Gage Park', 'Clearing', 'West Lawn', 'Chicago Lawn', 'West Englewood', 'Englewood', 'Chatham', 'Avalon Park', 'South Chicago', 'Burnside', 'Calumet Heights', "Roseland", 'Pullman', 'South Deering', 'East Side', 'West Pullman', 'Riverdale', 'Hegewisch', 'Ashburn', 'Auburn Gresham', 'Beverly', 'Washington Heights', 'Mount Greenwood', 'Morgan Park'))
+
+#categorize community to sides
+comm_df <- data.frame(community_stats$community)
+comm_df$side <- `levels<-`(comm_df$community, community.to.sides)
+community_stats <- merge(community_stats, comm_df, by.x='community', by.y='community_stats.community')
+
+
 
 
 ggplot(community_stats, aes(x=Per.Capita.Income, y=Diabetes.related)) +
   geom_point(aes(size=n)) + 
-  geom_smooth(method=lm)
+  geom_smooth(method=lm) + 
+  labs(title = 'Empty Title')
 
 
 
