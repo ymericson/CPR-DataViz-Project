@@ -96,7 +96,7 @@ community_stats <- merge(community_stats, comm_df, by.x='community', by.y='commu
 
 
 ggplot(community_stats, aes(x=Per.Capita.Income, y=Diabetes.related)) +
-  geom_point(aes(size=n)) + 
+  geom_point(aes(size=n, colour=side)) + 
   geom_smooth(method=lm) + 
   labs(title = 'Empty Title')
 
@@ -105,12 +105,11 @@ ggplot(community_stats, aes(x=Per.Capita.Income, y=Diabetes.related)) +
 # bar graph sorted by # of gyms
 community_stats %>% arrange(desc(n)) %>%
   slice(1:77) %>%
-  ggplot(., aes(reorder(community, n), y=n)) +
+  ggplot(., aes(fill = side, colour = side, reorder(community, n), y=n)) +
   geom_col() + 
   labs(x = "Community Areas", y = "Number of Fitness Centers") +
   coord_flip() + 
   scale_y_continuous(expand = c(0, 0), limits = c(0, 50)) 
-
 
 
 
